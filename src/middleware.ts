@@ -1,5 +1,5 @@
-import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
 const protectedRoutes = [
   "/beranda",
@@ -14,25 +14,29 @@ const protectedRoutes = [
 
 const authRoutes = ["/masuk", "/daftar"]
 
-export default auth((req) => {
+export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  const isLoggedIn = !!req.auth
+  const sessionToken =
+    req.cookies.get("authjs.session-token")?.value ||
+    req.cookies.get("__Secure-authjs.session-token")?.value
 
   const isProtected = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   )
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
 
-  if (isProtected && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/masuk", req.url))
+  if (isProtected && !sessionToken) {
+    const loginUrl = new URL("/masuk", req.url)
+    return NextResponse.redirect(loginUrl)
   }
 
-  if (isAuthRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL("/beranda", req.url))
+  if (isAuthRoute && sessionToken) {
+    const homeUrl = new URL("/beranda", req.url)
+    return NextResponse.redirect(homeUrl)
   }
 
   return NextResponse.next()
-})
+}
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico|uploads).*)"],
