@@ -99,8 +99,16 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200 py-8 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 text-center text-sm text-gray-500 dark:text-gray-400">
-          © 2026 Multi Social. Dibuat untuk memudahkan pengelolaan media sosial.
+        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 dark:text-gray-400">
+          <p>© 2026 Multi Social. Dibuat untuk memudahkan pengelolaan media sosial.</p>
+          <div className="flex items-center gap-6 text-xs">
+            <Link href="/terms" className="hover:text-blue-600 underline">
+              Terms of Service
+            </Link>
+            <Link href="/privacy" className="hover:text-blue-600 underline">
+              Privacy Policy
+            </Link>
+          </div>
         </div>
       </footer>
     </div>
