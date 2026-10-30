@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
+    "postinstall": "prisma generate",
     "seed": "tsx prisma/seed.ts",
     "lint": "eslint"
   },
@@ -15,6 +16,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
     "@prisma/client": "6.19.3",
+    "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-query": "^5.105.0",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
@@ -27,6 +29,7 @@
     "prisma": "6.19.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "ssh2": "^1.17.0",
     "tailwind-merge": "^3.7.0",
     "zustand": "^5.0.16"
   },
