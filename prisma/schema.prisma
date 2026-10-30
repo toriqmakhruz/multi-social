@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -39,12 +39,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -85,20 +85,20 @@ enum Platform {
 }
 
 model SocialAccount {
-  id              String   @id @default(cuid())
-  userId          String
-  platform        Platform
-  platformUserId  String
+  id               String   @id @default(cuid())
+  userId           String
+  platform         Platform
+  platformUserId   String
   platformUsername String
-  displayName     String?
-  profileImage    String?  @db.Text
-  accessToken     String   @db.Text
-  refreshToken    String?  @db.Text
-  tokenExpiresAt  DateTime?
-  isActive        Boolean  @default(true)
-  metadata        String?  @db.Text // JSON string for extra platform data
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  displayName      String?
+  profileImage     String?
+  accessToken      String
+  refreshToken     String?
+  tokenExpiresAt   DateTime?
+  isActive         Boolean  @default(true)
+  metadata         String?  // JSON string
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   postPlatforms PostPlatform[]
@@ -122,7 +122,7 @@ enum PostStatus {
 model Post {
   id          String     @id @default(cuid())
   userId      String
-  content     String     @db.Text
+  content     String
   status      PostStatus @default(DRAFT)
   scheduledAt DateTime?
   publishedAt DateTime?
@@ -153,9 +153,9 @@ model PostPlatform {
   id              String     @id @default(cuid())
   postId          String
   socialAccountId String
-  platformPostId  String?    // ID from the platform after publishing
+  platformPostId  String?
   status          PostStatus @default(DRAFT)
-  errorMessage    String?    @db.Text
+  errorMessage    String?
   publishedAt     DateTime?
 
   // Analytics
@@ -187,19 +187,19 @@ enum MediaType {
 }
 
 model MediaFile {
-  id        String    @id @default(cuid())
-  userId    String
-  filename  String
+  id           String    @id @default(cuid())
+  userId       String
+  filename     String
   originalName String
-  mimeType  String
-  size      Int
-  url       String
-  type      MediaType
-  width     Int?
-  height    Int?
-  duration  Int?      // video duration in seconds
-  tags      String?   @db.Text // JSON array string
-  createdAt DateTime  @default(now())
+  mimeType     String
+  size         Int
+  url          String
+  type         MediaType
+  width        Int?
+  height       Int?
+  duration     Int?
+  tags         String?
+  createdAt    DateTime  @default(now())
 
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   postMedia PostMedia[]
@@ -220,15 +220,15 @@ enum JobStatus {
 
 model ScheduledJob {
   id          String    @id @default(cuid())
-  type        String    // "PUBLISH_POST"
-  payload     String    @db.Text // JSON
+  type        String
+  payload     String
   status      JobStatus @default(PENDING)
   attempts    Int       @default(0)
   maxAttempts Int       @default(3)
   runAt       DateTime
   startedAt   DateTime?
   completedAt DateTime?
-  error       String?   @db.Text
+  error       String?
   createdAt   DateTime  @default(now())
 
   @@index([status, runAt])

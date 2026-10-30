@@ -1,34 +1,56 @@
 import { requireAuth } from "@/lib/auth-utils"
-import { Card, CardContent } from "@/components/ui/card"
+import { db } from "@/lib/db"
+import { ContentCalendar } from "@/components/features/content-calendar"
 
 export default async function KalenderPage() {
-  await requireAuth()
+  const user = await requireAuth()
+
+  // Ambil postingan terjadwal & terbit untuk ditampilkan di kalender
+  const posts = await db.post.findMany({
+    where: {
+      userId: user.id,
+      OR: [
+        { scheduledAt: { not: null } },
+        { publishedAt: { not: null } },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      platforms: {
+        include: { socialAccount: true },
+      },
+    },
+  })
+
+  // Format serializable data untuk client component
+  const serializablePosts = posts.map((post) => ({
+    id: post.id,
+    content: post.content,
+    status: post.status,
+    scheduledAt: post.scheduledAt ? post.scheduledAt.toISOString() : null,
+    publishedAt: post.publishedAt ? post.publishedAt.toISOString() : null,
+    platforms: post.platforms.map((p) => ({
+      id: p.id,
+      socialAccount: {
+        platform: p.socialAccount.platform,
+        displayName: p.socialAccount.displayName,
+        platformUsername: p.socialAccount.platformUsername,
+      },
+    })),
+  }))
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          📅 Kalender Konten
+          📅 Kalender Konten Interaktif
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Lihat dan kelola jadwal postingan dalam tampilan kalender
+          Pantau dan atur seluruh rencana postingan media sosial Anda per tanggal
         </p>
       </div>
 
-      <Card>
-        <CardContent className="py-16 text-center">
-          <p className="text-4xl mb-3">📅</p>
-          <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Kalender Konten
-          </p>
-          <p className="text-gray-500 dark:text-gray-400">
-            Fitur kalender interaktif akan ditambahkan pada Phase 2.
-          </p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-            Untuk saat ini, gunakan halaman Postingan untuk melihat jadwal.
-          </p>
-        </CardContent>
-      </Card>
+      <ContentCalendar initialPosts={serializablePosts} />
     </div>
   )
 }
