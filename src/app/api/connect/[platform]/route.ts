@@ -60,7 +60,22 @@ export async function GET(
       return NextResponse.redirect(metaAuthUrl.toString())
     }
 
-    // 3. Fallback / Sandbox Mode untuk pengujian awal
+    // 3. Integrasi TikTok OAuth Resmi
+    if (platformUpper === "TIKTOK" && process.env.TIKTOK_CLIENT_KEY) {
+      const redirectUri = `${origin}/api/auth/callback/tiktok`
+      const scopes = "user.info.basic,video.upload,video.publish"
+
+      const tiktokAuthUrl = new URL("https://www.tiktok.com/v2/auth/authorize/")
+      tiktokAuthUrl.searchParams.set("client_key", process.env.TIKTOK_CLIENT_KEY)
+      tiktokAuthUrl.searchParams.set("redirect_uri", redirectUri)
+      tiktokAuthUrl.searchParams.set("scope", scopes)
+      tiktokAuthUrl.searchParams.set("response_type", "code")
+      tiktokAuthUrl.searchParams.set("state", session.user.id)
+
+      return NextResponse.redirect(tiktokAuthUrl.toString())
+    }
+
+    // 4. Fallback / Sandbox Mode untuk pengujian awal
     const mockAccounts: Record<string, { username: string; displayName: string }> = {
       YOUTUBE: { username: "my_youtube_channel", displayName: "Channel Utama" },
       INSTAGRAM: { username: "instabusiness_id", displayName: "Akun Instagram Bisnis" },
