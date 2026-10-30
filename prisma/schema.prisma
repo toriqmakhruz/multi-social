@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// AUTH - User & Account
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // NextAuth relations
+  accounts Account[]
+  sessions Session[]
+
+  // App relations
+  socialAccounts SocialAccount[]
+  posts          Post[]
+  mediaFiles     MediaFile[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// SOCIAL ACCOUNTS - Platform connections
+// ============================================
+
+enum Platform {
+  YOUTUBE
+  INSTAGRAM
+  FACEBOOK
+  TIKTOK
+}
+
+model SocialAccount {
+  id              String   @id @default(cuid())
+  userId          String
+  platform        Platform
+  platformUserId  String
+  platformUsername String
+  displayName     String?
+  profileImage    String?  @db.Text
+  accessToken     String   @db.Text
+  refreshToken    String?  @db.Text
+  tokenExpiresAt  DateTime?
+  isActive        Boolean  @default(true)
+  metadata        String?  @db.Text // JSON string for extra platform data
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postPlatforms PostPlatform[]
+
+  @@unique([platform, platformUserId])
+  @@map("social_accounts")
+}
+
+// ============================================
+// POSTS - Content management
+// ============================================
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+model Post {
+  id          String     @id @default(cuid())
+  userId      String
+  content     String     @db.Text
+  status      PostStatus @default(DRAFT)
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media     PostMedia[]
+  platforms PostPlatform[]
+
+  @@index([status, scheduledAt])
+  @@map("posts")
+}
+
+model PostMedia {
+  id       String @id @default(cuid())
+  postId   String
+  mediaId  String
+  position Int    @default(0)
+
+  post  Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  media MediaFile @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@map("post_media")
+}
+
+model PostPlatform {
+  id              String     @id @default(cuid())
+  postId          String
+  socialAccountId String
+  platformPostId  String?    // ID from the platform after publishing
+  status          PostStatus @default(DRAFT)
+  errorMessage    String?    @db.Text
+  publishedAt     DateTime?
+
+  // Analytics
+  likes       Int @default(0)
+  comments    Int @default(0)
+  shares      Int @default(0)
+  views       Int @default(0)
+  reach       Int @default(0)
+  impressions Int @default(0)
+
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  post          Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, socialAccountId])
+  @@map("post_platforms")
+}
+
+// ============================================
+// MEDIA - File management
+// ============================================
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+model MediaFile {
+  id        String    @id @default(cuid())
+  userId    String
+  filename  String
+  originalName String
+  mimeType  String
+  size      Int
+  url       String
+  type      MediaType
+  width     Int?
+  height    Int?
+  duration  Int?      // video duration in seconds
+  tags      String?   @db.Text // JSON array string
+  createdAt DateTime  @default(now())
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postMedia PostMedia[]
+
+  @@map("media_files")
+}
+
+// ============================================
+// SCHEDULER - Job queue
+// ============================================
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model ScheduledJob {
+  id          String    @id @default(cuid())
+  type        String    // "PUBLISH_POST"
+  payload     String    @db.Text // JSON
+  status      JobStatus @default(PENDING)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  runAt       DateTime
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?   @db.Text
+  createdAt   DateTime  @default(now())
+
+  @@index([status, runAt])
+  @@map("scheduled_jobs")
+}
